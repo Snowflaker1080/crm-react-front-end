@@ -1,11 +1,12 @@
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
 
-export default function Home() {
+const Home = () => {
   const { user } = useAuth();
+  const hasToken = !!localStorage.getItem('token'); // redirect even before user is hydrated
 
   // If already signed in, send people straight to the dashboard
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user || hasToken) return <Navigate to="/dashboard" replace />;
 
   return (
     <section className="container" aria-labelledby="home-title">
@@ -99,4 +100,6 @@ export default function Home() {
       />
     </section>
   );
-}
+};
+
+export default Home;

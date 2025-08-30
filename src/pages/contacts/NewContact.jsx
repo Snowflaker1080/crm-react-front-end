@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import ContactForm from '../../components/forms/ContactForm.jsx';
 
-export default function NewContact() {
+const NewContact = () => {
   const navigate = useNavigate();
   const [error, setError] = useState('');
 
@@ -42,4 +42,6 @@ export default function NewContact() {
       </div>
     </section>
   );
-}
+};
+
+export default NewContact;

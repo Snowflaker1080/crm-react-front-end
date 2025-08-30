@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../../services/api.js';
 
-export default function InvitePage() {
+const InvitePage = () => {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -13,16 +13,20 @@ export default function InvitePage() {
   const [customDate, setCustomDate] = useState(''); // yyyy-mm-dd
 
   useEffect(() => {
+    let isMounted = true;
     (async () => {
       try {
         const { data } = await api.get('/invites');
+        if (!isMounted) return;
         setList(Array.isArray(data) ? data : []);
       } catch (e) {
-        setError(e.response?.data?.error || 'Failed to load invites');
+        if (!isMounted) return;
+        setError(e?.response?.data?.error || e?.message || 'Failed to load invites');
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     })();
+    return () => { isMounted = false; };
   }, []);
 
   const now = Date.now();
@@ -30,8 +34,7 @@ export default function InvitePage() {
   const computedExpiryISO = useMemo(() => {
     if (expiryPreset === 'custom' && customDate) {
       const d = new Date(customDate);
-      if (!Number.isNaN(d.getTime())) return d.toISOString();
-      return null;
+      return Number.isNaN(d.getTime()) ? null : d.toISOString();
     }
     const days = parseInt(expiryPreset, 10);
     const d = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
@@ -47,14 +50,13 @@ export default function InvitePage() {
   };
 
   const copyTokenLink = async (token) => {
-    // This is a placeholder accept URL; wire up your public accept page later
     const url = `${window.location.origin}/invite/${token}`;
     try {
       await navigator.clipboard.writeText(url);
       alert('Invite link copied to clipboard.');
     } catch {
       // fallback
-      prompt('Copy this invite link:', url);
+      prompt('Copy this invite link:', url); // eslint-disable-line no-alert
     }
   };
 
@@ -79,7 +81,7 @@ export default function InvitePage() {
       setContactEmail('');
       if (expiryPreset === 'custom') setCustomDate('');
     } catch (e) {
-      setError(e.response?.data?.error || 'Failed to create invite');
+      setError(e?.response?.data?.error || e?.message || 'Failed to create invite');
     } finally {
       setSaving(false);
     }
@@ -91,7 +93,7 @@ export default function InvitePage() {
       await api.delete(`/invites/${id}`);
       setList((prev) => prev.filter((i) => i._id !== id));
     } catch (e) {
-      setError(e.response?.data?.error || 'Failed to revoke invite');
+      setError(e?.response?.data?.error || e?.message || 'Failed to revoke invite');
     }
   };
 
@@ -222,4 +224,6 @@ export default function InvitePage() {
       )}
     </section>
   );
-}
+};
+
+export default InvitePage;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import GroupForm from '../../components/forms/GroupForm.jsx';
 
-export default function NewGroup() {
+const NewGroup = () => {
   const navigate = useNavigate();
   const [error, setError] = useState('');
 
@@ -35,4 +35,6 @@ export default function NewGroup() {
       </div>
     </section>
   );
-}
+};
+
+export default NewGroup;

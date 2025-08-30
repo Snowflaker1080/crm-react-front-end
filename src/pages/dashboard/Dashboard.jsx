@@ -4,13 +4,16 @@ import api from '../../services/api.js';
 import EmptyState from '../../components/EmptyState.jsx';
 import SectionHeader from '../../components/SectionHeader.jsx';
 
-export default function Dashboard() {
+const Dashboard = () => {
   const [me, setMe] = useState(null);
   const [groups, setGroups] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     (async () => {
       try {
         const [{ data: meRes }, { data: groupsRes }, { data: contactsRes }] = await Promise.all([
@@ -18,16 +21,40 @@ export default function Dashboard() {
           api.get('/groups'),
           api.get('/contacts'),
         ]);
+
+        if (!isMounted) return;
+
         setMe(meRes?.user || null);
         setGroups(Array.isArray(groupsRes) ? groupsRes : []);
         setContacts(Array.isArray(contactsRes) ? contactsRes : []);
       } catch (e) {
-        setError(e.response?.data?.error || 'Failed to load dashboard');
+        if (!isMounted) return;
+        setError(e?.response?.data?.error || e?.message || 'Failed to load dashboard');
+      } finally {
+        if (isMounted) setLoading(false);
       }
     })();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  if (error) return <section className="container"><p role="alert">{error}</p></section>;
+  if (loading) {
+    return (
+      <section className="container">
+        <p>Loading…</p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="container">
+        <p role="alert">{error}</p>
+      </section>
+    );
+  }
 
   return (
     <section className="container">
@@ -108,4 +135,6 @@ export default function Dashboard() {
       </div>
     </section>
   );
-}
+};
+
+export default Dashboard;

@@ -4,7 +4,7 @@ import api from '../../services/api.js';
 import ContactForm from '../../components/forms/ContactForm.jsx';
 import EmptyState from '../../components/EmptyState.jsx';
 
-export default function ContactProfile() {
+const ContactProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -15,29 +15,35 @@ export default function ContactProfile() {
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     (async () => {
       try {
         const [{ data: c }, { data: allGroups }] = await Promise.all([
           api.get(`/contacts/${id}`),
           api.get('/groups'),
         ]);
+        if (!isMounted) return;
         setContact(c);
-        setGroups(allGroups);
+        setGroups(Array.isArray(allGroups) ? allGroups : []);
       } catch (e) {
-        setError(e.response?.data?.error || 'Failed to load contact');
+        if (!isMounted) return;
+        setError(e?.response?.data?.error || e?.message || 'Failed to load contact');
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     })();
+
+    return () => { isMounted = false; };
   }, [id]);
 
   const onDelete = async () => {
     if (!window.confirm('Delete this contact?')) return;
     try {
       await api.delete(`/contacts/${id}`);
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     } catch (e) {
-      setError(e.response?.data?.error || 'Delete failed');
+      setError(e?.response?.data?.error || e?.message || 'Delete failed');
     }
   };
 
@@ -121,4 +127,6 @@ export default function ContactProfile() {
       </div>
     </section>
   );
-}
+};
+
+export default ContactProfile;

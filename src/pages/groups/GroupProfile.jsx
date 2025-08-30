@@ -4,41 +4,48 @@ import api from '../../services/api.js';
 import GroupForm from '../../components/forms/GroupForm.jsx';
 import EmptyState from '../../components/EmptyState.jsx';
 
-export default function GroupProfile() {
+const GroupProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [group, setGroup] = useState(null);
-  const [members, setMembers] = useState([]);      // contacts in this group
+  const [members, setMembers] = useState([]);       // contacts in this group
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     (async () => {
       try {
         // Load the group
         const { data: g } = await api.get(`/groups/${id}`);
+        if (!isMounted) return;
         setGroup(g);
 
         // Load contacts filtered by this group
         const { data: contacts } = await api.get('/contacts', { params: { group: id } });
+        if (!isMounted) return;
         setMembers(Array.isArray(contacts) ? contacts : []);
       } catch (e) {
-        setError(e.response?.data?.error || 'Failed to load group');
+        if (!isMounted) return;
+        setError(e?.response?.data?.error || e?.message || 'Failed to load group');
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     })();
+
+    return () => { isMounted = false; };
   }, [id]);
 
   const onDelete = async () => {
     if (!window.confirm('Delete this group? Members will remain but lose this tag.')) return;
     try {
       await api.delete(`/groups/${id}`);
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     } catch (e) {
-      setError(e.response?.data?.error || 'Delete failed');
+      setError(e?.response?.data?.error || e?.message || 'Delete failed');
     }
   };
 
@@ -76,25 +83,32 @@ export default function GroupProfile() {
 
       <p><strong>Type:</strong> {group.type}</p>
 
-  <h2>Members</h2>
-{members.length === 0 ? (
-  <EmptyState
-    title="No members in this group"
-    action={<Link className="btn btn-primary" to="/contacts/new">Add a contact</Link>}
-    icon="👥"
-  >
-    Add contacts and assign them to <strong>{group.name}</strong>.
-  </EmptyState>
-) : (
-  <ul className="card" style={{padding:'1rem'}}>
-    {members.map((c) => (
-      <li key={c._id} style={{padding:'.4rem 0', borderBottom:'1px solid rgba(255,255,255,.06)'}}>
-        <Link to={`/contacts/${c._id}`}>{c.firstName} {c.lastName}</Link>
-        {c.email ? <span className="muted"> • {c.email}</span> : null}
-      </li>
-    ))}
-  </ul>
-)}
+      <h2>Members</h2>
+      {members.length === 0 ? (
+        <EmptyState
+          title="No members in this group"
+          action={<Link className="btn btn-primary" to="/contacts/new">Add a contact</Link>}
+          icon="👥"
+        >
+          Add contacts and assign them to <strong>{group.name}</strong>.
+        </EmptyState>
+      ) : (
+        <ul className="card" style={{ padding: '1rem' }}>
+          {members.map((c) => (
+            <li
+              key={c._id}
+              style={{ padding: '.4rem 0', borderBottom: '1px solid rgba(255,255,255,.06)' }}
+            >
+              <Link to={`/contacts/${c._id}`}>
+                {[c.firstName, c.lastName].filter(Boolean).join(' ') || 'Unnamed'}
+              </Link>
+              {c.email ? <span className="muted"> • {c.email}</span> : null}
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
-}
+};
+
+export default GroupProfile;
