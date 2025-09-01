@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../services/api.js';
 
-// Fallback list mirrors your models/Group.js enum:
 const FALLBACK_GROUP_TYPES = [
   'acquaintances',
   'club',
@@ -24,29 +23,26 @@ const toLabel = (v) =>
     .replace(/\b\w/g, (m) => m.toUpperCase());
 
 const GroupForm = ({
-  mode = 'create',            // 'create' | 'edit'
-  initialData = null,         // pre-fetched data if applicable
-  onSaved,                    // callback(group)
+  mode = 'create',
+  initialData = null,
+  onSaved,
 }) => {
   const navigate = useNavigate();
-  const params = useParams(); // expects :id if editing via route
+  const params = useParams();
   const groupId = useMemo(() => initialData?._id || params.id, [initialData, params]);
 
-  const [form, setForm] = useState({ name: '', type: 'other' });
+  const [form, setForm] = useState({ name: '', type: 'other', description: '' }); // ← add description
   const [loading, setLoading] = useState(mode === 'edit' && !initialData);
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState('');
 
-  // Allowed types (from API if available, else fallback)
   const [types, setTypes] = useState(FALLBACK_GROUP_TYPES);
 
-  // Try to fetch allowed types from /groups/meta (optional convenience endpoint)
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        // If present, the route should return: { types: ['acquaintances', ...] }
-        const { data } = await api.get('/groups/meta');
+        const { data } = await api.get('/groups/meta'); // optional convenience route
         if (!mounted) return;
         const serverTypes = Array.isArray(data?.types) && data.types.length > 0
           ? data.types
@@ -59,10 +55,13 @@ const GroupForm = ({
     return () => { mounted = false; };
   }, []);
 
-  // Pre-fill (from prop) or fetch if editing by id
   useEffect(() => {
     if (initialData) {
-      setForm({ name: initialData.name ?? '', type: initialData.type ?? 'other' });
+      setForm({
+        name: initialData.name ?? '',
+        type: initialData.type ?? 'other',
+        description: initialData.description ?? '',
+      });
       setLoading(false);
       return;
     }
@@ -70,7 +69,11 @@ const GroupForm = ({
       (async () => {
         try {
           const { data } = await api.get(`/groups/${groupId}`);
-          setForm({ name: data.name ?? '', type: data.type ?? 'other' });
+          setForm({
+            name: data.name ?? '',
+            type: data.type ?? 'other',
+            description: data.description ?? '',
+          });
         } catch (e) {
           setError(e?.response?.data?.error || e?.message || 'Failed to load group');
         } finally {
@@ -80,7 +83,6 @@ const GroupForm = ({
     }
   }, [mode, groupId, initialData]);
 
-  // Ensure the current value is always selectable (covers legacy values)
   const effectiveTypes = useMemo(() => {
     const list = Array.isArray(types) ? types.slice() : FALLBACK_GROUP_TYPES.slice();
     if (form.type && !list.includes(form.type)) list.push(form.type);
@@ -103,14 +105,18 @@ const GroupForm = ({
 
     setSaving(true);
     try {
-      const payload = { name: form.name.trim(), type: form.type };
+      const payload = {
+        name: form.name.trim(),
+        type: form.type,
+        description: form.description?.trim() || '',
+      };
+
       const { data } =
         mode === 'edit'
           ? await api.put(`/groups/${groupId}`, payload)
           : await api.post('/groups', payload);
 
       onSaved?.(data);
-      // If editing, prefer the id we have. If creating, use new id or go to dashboard.
       navigate(mode === 'edit' ? `/groups/${data._id || groupId}` : '/dashboard');
     } catch (e) {
       setError(e?.response?.data?.error || e?.message || 'Save failed');
@@ -144,6 +150,17 @@ const GroupForm = ({
             <option key={t} value={t}>{toLabel(t)}</option>
           ))}
         </select>
+      </label>
+
+      <label>
+        Description (optional)
+        <textarea
+          name="description"
+          value={form.description}
+          onChange={handleChange}
+          rows={3}
+          placeholder="Add a short descriptor for this group (shown on the dashboard card)…"
+        />
       </label>
 
       {error && <p role="alert">{error}</p>}

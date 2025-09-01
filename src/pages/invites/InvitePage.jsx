@@ -1,3 +1,4 @@
+// src/pages/invites/InvitePage.jsx
 import { useEffect, useMemo, useState } from 'react';
 import api from '../../services/api.js';
 
@@ -12,16 +13,29 @@ const InvitePage = () => {
   const [expiryPreset, setExpiryPreset] = useState('7'); // days: '7' | '14' | '30' | 'custom'
   const [customDate, setCustomDate] = useState(''); // yyyy-mm-dd
 
+  // --- Load invites ---------------------------------------------------------
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
-        const { data } = await api.get('/invites');
+        const { data } = await api.get('/invites'); // <-- correct, plural
         if (!isMounted) return;
         setList(Array.isArray(data) ? data : []);
       } catch (e) {
         if (!isMounted) return;
-        setError(e?.response?.data?.error || e?.message || 'Failed to load invites');
+        // Friendlier diagnostics when this 404s or backend is on a different port
+        const status = e?.response?.status;
+        if (status === 404) {
+          setError(
+            'Invites endpoint not found (404). Ensure the backend mounts /api/invites and the frontend calls /invites.'
+          );
+        } else if (e.code === 'ERR_NETWORK') {
+          setError(
+            'Cannot reach API. Check your backend is running and that src/services/api.js baseURL points to the correct port.'
+          );
+        } else {
+          setError(e?.response?.data?.error || e?.message || 'Failed to load invites');
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -30,6 +44,9 @@ const InvitePage = () => {
   }, []);
 
   const now = Date.now();
+
+  // Pick the app origin for links (works in dev/prod)
+  const appOrigin = import.meta?.env?.VITE_PUBLIC_APP_ORIGIN || window.location.origin;
 
   const computedExpiryISO = useMemo(() => {
     if (expiryPreset === 'custom' && customDate) {
@@ -50,38 +67,49 @@ const InvitePage = () => {
   };
 
   const copyTokenLink = async (token) => {
-    const url = `${window.location.origin}/invite/${token}`;
+    const url = `${appOrigin}/invite/${token}`;
     try {
       await navigator.clipboard.writeText(url);
       alert('Invite link copied to clipboard.');
     } catch {
       // fallback
-      prompt('Copy this invite link:', url); // eslint-disable-line no-alert
+      // eslint-disable-next-line no-alert
+      prompt('Copy this invite link:', url);
     }
   };
+
+  const emailValid = useMemo(() => {
+    const v = contactEmail.trim();
+    if (!v) return false;
+    // simple email check
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  }, [contactEmail]);
+
+  const formValid = emailValid && Boolean(computedExpiryISO);
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!contactEmail.trim()) {
-      setError('Email is required.');
-      return;
-    }
-    if (!computedExpiryISO) {
-      setError('Please select a valid expiry.');
+    if (!formValid) {
+      setError('Please enter a valid email and expiry.');
       return;
     }
 
     setSaving(true);
     try {
       const payload = { contactEmail: contactEmail.trim(), expiresAt: computedExpiryISO };
-      const { data } = await api.post('/invites', payload);
+      const { data } = await api.post('/invites', payload); // <-- correct, plural
       setList((prev) => [data, ...prev]);
       setContactEmail('');
       if (expiryPreset === 'custom') setCustomDate('');
     } catch (e) {
-      setError(e?.response?.data?.error || e?.message || 'Failed to create invite');
+      const status = e?.response?.status;
+      if (status === 404) {
+        setError('Invites endpoint not found (404). Backend must mount /api/invites.');
+      } else {
+        setError(e?.response?.data?.error || e?.message || 'Failed to create invite');
+      }
     } finally {
       setSaving(false);
     }
@@ -152,7 +180,7 @@ const InvitePage = () => {
             )}
           </div>
 
-          <button className="btn btn-primary" type="submit" disabled={saving}>
+          <button className="btn btn-primary" type="submit" disabled={saving || !formValid}>
             {saving ? 'Sending…' : 'Send Invite'}
           </button>
         </form>

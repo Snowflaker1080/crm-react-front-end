@@ -126,23 +126,39 @@ const Dashboard = () => {
               className="grid"
               style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px,1fr))' }}
             >
-{groups.map((g) => (
-  <div
-    key={g._id}
-    className="card"
-    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-  >
-    <div style={{ flex: 1 }}>
-      {/* Name + badge side by side */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-        <h3 style={{ margin: 0 }}>{g.name}</h3>
-        <span className="badge">{g.type}</span>
-      </div>
-      <p className="muted" style={{ marginTop: '.3rem' }}>Open to view members</p>
-    </div>
-    <Link className="btn" to={`/groups/${g._id}`}>View</Link>
-  </div>
-))}
+              {groups.map((g) => (
+                <div
+                  key={g._id}
+                  className="card"
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Name + badge side by side */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap' }}>
+                      <h3 style={{ margin: 0 }}>{g.name}</h3>
+                      <span className="badge">{g.type}</span>
+                    </div>
+
+                    {/* ✅ Only show description if present */}
+                    {g.description && (
+                      <p
+                        className="muted"
+                        style={{
+                          marginTop: '.3rem',
+                          marginBottom: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: '40ch',
+                        }}
+                      >
+                        {g.description}
+                      </p>
+                    )}
+                  </div>
+                  <Link className="btn" to={`/groups/${g._id}`}>View</Link>
+                </div>
+              ))}
             </div>
           )}
         </section>
@@ -200,7 +216,7 @@ const Dashboard = () => {
               {sortedContacts.map((c) => (
                 <div
                   key={c._id}
-                  className="card contact-card"  /*`contact-card` class so CSS can shrink name */
+                  className="card contact-card"
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                 >
                   <h3 style={{ marginTop: 0 }}>
