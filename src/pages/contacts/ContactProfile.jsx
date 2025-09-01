@@ -4,6 +4,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import api from '../../services/api.js';
 import ContactForm from '../../components/forms/ContactForm.jsx';
 import EmptyState from '../../components/EmptyState.jsx';
+import ConnectionCadenceCard from './ConnectionCadenceCard.jsx';
 
 const ContactProfile = () => {
   const { id } = useParams();
@@ -36,6 +37,11 @@ const ContactProfile = () => {
 
     return () => { isMounted = false; };
   }, [id]);
+
+  const refreshContact = async () => {
+    const { data } = await api.get(`/contacts/${id}`);
+    setContact(data);
+  };
 
   const onDelete = async () => {
     if (!window.confirm('Delete this contact?')) return;
@@ -75,18 +81,13 @@ const ContactProfile = () => {
     );
   }
 
-  // Compute displayGroupIds AFTER guards, when contact exists
-  // derive ids directly on contact (handles ids OR populated docs)
+  // union of contact.groups + groups.members (deduped)
   const contactGroupIds = Array.isArray(contact.groups)
     ? contact.groups.map(idStr).filter(Boolean)
     : [];
-
-  // Derive from groups where this contact is a member
   const derivedGroupIds = groups
     .filter((g) => Array.isArray(g.members) && g.members.some((m) => sameId(m, contact._id)))
     .map((g) => String(g._id));
-
-  // union the two sources (dedupe)
   const displayGroupIds = Array.from(new Set([...contactGroupIds, ...derivedGroupIds]));
 
   return (
@@ -104,6 +105,7 @@ const ContactProfile = () => {
       </header>
 
       <div className="grid two">
+        {/* Left column: details */}
         <div className="card">
           <h2 style={{ marginTop: 0 }}>Details</h2>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -115,15 +117,10 @@ const ContactProfile = () => {
               </li>
             )}
             {contact.notes && <li><strong>Notes:</strong> {contact.notes}</li>}
-            {contact.firstConnectedAt && (
-              <li><strong>First connected:</strong> {new Date(contact.firstConnectedAt).toLocaleDateString()}</li>
-            )}
-            {contact.lastConnectedAt && (
-              <li><strong>Last connected:</strong> {new Date(contact.lastConnectedAt).toLocaleDateString()}</li>
-            )}
           </ul>
         </div>
 
+        {/* Right column: groups */}
         <div>
           <h2>Groups</h2>
           {displayGroupIds.length > 0 ? (
@@ -144,6 +141,11 @@ const ContactProfile = () => {
             </EmptyState>
           )}
         </div>
+      </div>
+
+      {/* Cadence card spans full width below */}
+      <div style={{ marginTop: '1rem' }}>
+        <ConnectionCadenceCard contact={contact} onRefresh={refreshContact} />
       </div>
     </section>
   );

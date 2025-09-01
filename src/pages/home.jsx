@@ -1,27 +1,58 @@
+// src/pages/Home.jsx
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
+import OrbitLogo from '../assets/Orbit CRM Logo.png'; 
 
 const Home = () => {
   const { user } = useAuth();
-  const hasToken = !!localStorage.getItem('token'); // redirect even before user is hydrated
+  const hasToken = !!localStorage.getItem('token');
 
-  // If already signed in, send people straight to the dashboard
   if (user || hasToken) return <Navigate to="/dashboard" replace />;
 
   return (
     <section className="container" aria-labelledby="home-title">
       {/* Hero */}
-      <header className="card" style={{ padding: '2rem', marginBottom: '1rem' }}>
-        <h1 id="home-title" style={{ marginTop: 0, marginBottom: '.4rem' }}>
-          Orbit CRM
-        </h1>
-        <p className="muted" style={{ marginTop: 0, maxWidth: 720 }}>
-          A simple personal CRM to organise your cohorts, track contacts, and keep
-          networking on schedule.
-        </p>
-        <div style={{ display: 'flex', gap: '.6rem', marginTop: '.8rem', flexWrap: 'wrap' }}>
-          <Link className="btn btn-primary" to="/sign-up">Create an account</Link>
-          <Link className="btn" to="/sign-in" aria-label="Sign in to Orbit CRM">Sign In</Link>
+      <header
+        className="card"
+        style={{
+          padding: '2rem',
+          marginBottom: '1rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1.5rem',
+        }}
+      >
+        {/* Logo on the left */}
+        <img
+          src={OrbitLogo}
+          alt="Orbit CRM Logo"
+          style={{ width: '80px', height: 'auto', flexShrink: 0 }}
+        />
+
+        {/* Text content */}
+        <div style={{ flex: 1 }}>
+          <h1 id="home-title" style={{ marginTop: 0, marginBottom: '.4rem' }}>
+            Orbit CRM
+          </h1>
+          <p className="muted" style={{ marginTop: 0, maxWidth: 720 }}>
+            A simple personal CRM to organise your cohorts, track contacts, and keep
+            networking on schedule.
+          </p>
+          <div
+            style={{
+              display: 'flex',
+              gap: '.6rem',
+              marginTop: '.8rem',
+              flexWrap: 'wrap',
+            }}
+          >
+            <Link className="btn btn-primary" to="/sign-up">
+              Create an account
+            </Link>
+            <Link className="btn" to="/sign-in" aria-label="Sign in to Orbit CRM">
+              Sign In
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -74,30 +105,6 @@ const Home = () => {
           </ul>
         </article>
       </div>
-
-      {/* Quick start CTA row */}
-      <div className="card" style={{ marginTop: '1rem', padding: '1rem' }}>
-        <h2 style={{ marginTop: 0 }}>Get started</h2>
-        <ol style={{ marginTop: 0 }}>
-          <li>
-            <Link to="/sign-up">Create your account</Link> (JWT-secured).
-          </li>
-          <li>Sign in and head to the <strong>Dashboard</strong>.</li>
-          <li>Create a <strong>Group</strong> and add your first <strong>Contact</strong>.</li>
-        </ol>
-        <div style={{ display: 'flex', gap: '.6rem', marginTop: '.6rem', flexWrap: 'wrap' }}>
-          <Link className="btn btn-primary" to="/sign-up">Sign Up Free</Link>
-          <Link className="btn" to="/sign-in">I already have an account</Link>
-        </div>
-      </div>
-
-      {/* Accessibility: decorative logo alt text hidden for screen readers */}
-      <img
-        src="data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' width='0' height='0'/>"
-        alt=""
-        className="sr-only"
-      />
     </section>
   );
 };
