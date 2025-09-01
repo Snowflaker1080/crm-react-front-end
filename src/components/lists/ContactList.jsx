@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EmptyState from '../EmptyState.jsx';
 
-export default function ContactList({
+const ContactList = ({
   contacts = [],
   onDelete,                // optional: (contactId) => void
-}) {
+}) => {
   const [q, setQ] = useState('');
   const [sortBy, setSortBy] = useState('first');   // 'first' | 'last'
   const [dir, setDir] = useState('asc');           // 'asc' | 'desc'
@@ -58,7 +58,8 @@ export default function ContactList({
     <section aria-labelledby="contact-list-title">
       <header className="flex-between" style={{ marginBottom: '.8rem' }}>
         <h2 id="contact-list-title" style={{ margin: 0 }}>
-          Contacts <span className="badge" aria-label={`${resultCount} of ${count} showing`}>
+          Contacts{' '}
+          <span className="badge" aria-label={`${resultCount} of ${count} showing`}>
             {resultCount}/{count}
           </span>
         </h2>
@@ -145,4 +146,6 @@ export default function ContactList({
       )}
     </section>
   );
-}
+};
+
+export default ContactList;

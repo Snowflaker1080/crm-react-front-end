@@ -1,15 +1,41 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+// pages/dashboard/Dashboard.jsx
+import { useEffect, useMemo, useState } from 'react';
+import { Link, Navigate } from 'react-router-dom';
 import api from '../../services/api.js';
 import EmptyState from '../../components/EmptyState.jsx';
 import SectionHeader from '../../components/SectionHeader.jsx';
+import { useAuth } from '../../hooks/useAuth.jsx';
+
+const SORT_FIELD_KEY = 'dashboard.contacts.sortField';
+const SORT_ORDER_KEY = 'dashboard.contacts.sortOrder';
+const VALID_FIELDS = new Set(['firstName', 'lastName']);
+const VALID_ORDERS = new Set(['asc', 'desc']);
+
+const readPersisted = (key, fallback, validSet) => {
+  const v = localStorage.getItem(key);
+  return v && validSet?.has(v) ? v : (v ?? fallback);
+};
 
 const Dashboard = () => {
+  const { token } = useAuth();
   const [me, setMe] = useState(null);
   const [groups, setGroups] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Persisted sort state (lazy init from localStorage)
+  const [sortField, setSortField] = useState(() =>
+    readPersisted(SORT_FIELD_KEY, 'firstName', VALID_FIELDS)
+  );
+  const [sortOrder, setSortOrder] = useState(() =>
+    readPersisted(SORT_ORDER_KEY, 'asc', VALID_ORDERS)
+  );
+
+  // Gate: if no token, redirect to sign-in
+  if (!token && !localStorage.getItem('token')) {
+    return <Navigate to="/sign-in" replace />;
+  }
 
   useEffect(() => {
     let isMounted = true;
@@ -35,10 +61,27 @@ const Dashboard = () => {
       }
     })();
 
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, []);
+
+  // Persist changes
+  useEffect(() => {
+    if (VALID_FIELDS.has(sortField)) localStorage.setItem(SORT_FIELD_KEY, sortField);
+    if (VALID_ORDERS.has(sortOrder)) localStorage.setItem(SORT_ORDER_KEY, sortOrder);
+  }, [sortField, sortOrder]);
+
+  // derive sorted contacts with useMemo
+  const sortedContacts = useMemo(() => {
+    const field = VALID_FIELDS.has(sortField) ? sortField : 'firstName';
+    const order = sortOrder === 'desc' ? -1 : 1;
+    return [...contacts].sort((a, b) => {
+      const aVal = (a?.[field] || '').toString().toLowerCase();
+      const bVal = (b?.[field] || '').toString().toLowerCase();
+      if (aVal < bVal) return -1 * order;
+      if (aVal > bVal) return 1 * order;
+      return 0;
+    });
+  }, [contacts, sortField, sortOrder]);
 
   if (loading) {
     return (
@@ -83,18 +126,23 @@ const Dashboard = () => {
               className="grid"
               style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px,1fr))' }}
             >
-              {groups.map((g) => (
-                <div key={g._id} className="card">
-                  <h3 style={{ marginTop: 0 }}>{g.name}</h3>
-                  <span className="badge">{g.type}</span>
-                  <p className="muted" style={{ marginTop: '.5rem' }}>
-                    Open to view members
-                  </p>
-                  <Link className="btn" to={`/groups/${g._id}`} style={{ marginTop: '.6rem' }}>
-                    View
-                  </Link>
-                </div>
-              ))}
+{groups.map((g) => (
+  <div
+    key={g._id}
+    className="card"
+    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+  >
+    <div style={{ flex: 1 }}>
+      {/* Name + badge side by side */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+        <h3 style={{ margin: 0 }}>{g.name}</h3>
+        <span className="badge">{g.type}</span>
+      </div>
+      <p className="muted" style={{ marginTop: '.3rem' }}>Open to view members</p>
+    </div>
+    <Link className="btn" to={`/groups/${g._id}`}>View</Link>
+  </div>
+))}
             </div>
           )}
         </section>
@@ -105,6 +153,37 @@ const Dashboard = () => {
             title="Your Contacts"
             right={<Link className="btn btn-primary" to="/contacts/new">New Contact</Link>}
           />
+
+          {/* sort controls */}
+          {contacts.length > 0 && (
+            <div style={{ display: 'flex', gap: '.5rem', marginBottom: '.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <label>
+                Sort by{' '}
+                <select value={sortField} onChange={(e) => setSortField(e.target.value)}>
+                  <option value="firstName">First Name</option>
+                  <option value="lastName">Last Name</option>
+                </select>
+              </label>
+              <label>
+                Order{' '}
+                <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
+                  <option value="asc">Ascending</option>
+                  <option value="desc">Descending</option>
+                </select>
+              </label>
+              <button
+                className="btn"
+                onClick={() => {
+                  setSortField('firstName');
+                  setSortOrder('asc');
+                }}
+                title="Reset sort"
+              >
+                Reset
+              </button>
+            </div>
+          )}
+
           {contacts.length === 0 ? (
             <EmptyState
               title="No contacts yet"
@@ -118,15 +197,16 @@ const Dashboard = () => {
               className="grid"
               style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px,1fr))' }}
             >
-              {contacts.map((c) => (
-                <div key={c._id} className="card">
+              {sortedContacts.map((c) => (
+                <div
+                  key={c._id}
+                  className="card contact-card"  /*`contact-card` class so CSS can shrink name */
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
                   <h3 style={{ marginTop: 0 }}>
                     {[c.firstName, c.lastName].filter(Boolean).join(' ') || 'Unnamed'}
                   </h3>
-                  {c.email && <p className="muted">{c.email}</p>}
-                  <Link className="btn" to={`/contacts/${c._id}`} style={{ marginTop: '.6rem' }}>
-                    View
-                  </Link>
+                  <Link className="btn" to={`/contacts/${c._id}`}>View</Link>
                 </div>
               ))}
             </div>

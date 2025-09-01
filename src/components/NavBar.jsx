@@ -1,3 +1,4 @@
+// src/components/NavBar.jsx
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.jsx';
 
@@ -21,22 +22,22 @@ const NavBar = () => {
       </div>
 
       <div className="nav-links">
-        {!token ? (
-          <>
-            <Link to="/sign-in">Sign In</Link>
-            <Link to="/sign-up">Sign Up</Link>
-          </>
-        ) : (
-          <>
-            <Link to="/dashboard">Dashboard</Link>
-            <Link to="/groups/new">New Group</Link>
-            <Link to="/contacts/new">New Contact</Link>
-            <Link to="/invite">Invite</Link>
-            <button onClick={handleSignOut} className="btn-link">
-              Sign Out
-            </button>
-          </>
-        )}
+{!token ? (
+  <>
+    <Link to="/sign-in" className="signin nav-button">Sign In</Link>
+    <Link to="/sign-up" className="signup nav-button">Sign Up</Link>
+  </>
+) : (
+  <>
+    <Link to="/dashboard" className="dashboard nav-button">Dashboard</Link>
+    <Link to="/groups/new" className="new-group nav-button">New Group</Link>
+    <Link to="/contacts/new" className="new-contact nav-button">New Contact</Link>
+    <Link to="/invite" className="invite nav-button">Invite</Link>
+    <button onClick={handleSignOut} className="btn-link signout nav-button">
+      Sign Out
+    </button>
+  </>
+)}
       </div>
     </nav>
   );

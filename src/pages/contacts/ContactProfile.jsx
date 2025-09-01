@@ -1,3 +1,4 @@
+// src/pages/contacts/ContactProfile.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import api from '../../services/api.js';
@@ -16,7 +17,6 @@ const ContactProfile = () => {
 
   useEffect(() => {
     let isMounted = true;
-
     (async () => {
       try {
         const [{ data: c }, { data: allGroups }] = await Promise.all([
@@ -47,7 +47,13 @@ const ContactProfile = () => {
     }
   };
 
-  const groupName = (gid) => groups.find((g) => g._id === gid)?.name || 'Unknown';
+  // helpers
+  const idStr = (v) => (typeof v === 'string' ? v : v?._id ? String(v._id) : String(v));
+  const sameId = (a, b) => String(a) === String(b);
+  const groupNameById = (gid) => {
+    const g = groups.find((gg) => sameId(gg._id, gid));
+    return g?.name || 'Unknown';
+  };
 
   if (loading) return <p className="muted">Loading…</p>;
   if (error) return <p role="alert">{error}</p>;
@@ -68,6 +74,20 @@ const ContactProfile = () => {
       </section>
     );
   }
+
+  // Compute displayGroupIds AFTER guards, when contact exists
+  // derive ids directly on contact (handles ids OR populated docs)
+  const contactGroupIds = Array.isArray(contact.groups)
+    ? contact.groups.map(idStr).filter(Boolean)
+    : [];
+
+  // Derive from groups where this contact is a member
+  const derivedGroupIds = groups
+    .filter((g) => Array.isArray(g.members) && g.members.some((m) => sameId(m, contact._id)))
+    .map((g) => String(g._id));
+
+  // union the two sources (dedupe)
+  const displayGroupIds = Array.from(new Set([...contactGroupIds, ...derivedGroupIds]));
 
   return (
     <section className="container" aria-labelledby="contact-title">
@@ -106,11 +126,11 @@ const ContactProfile = () => {
 
         <div>
           <h2>Groups</h2>
-          {Array.isArray(contact.groups) && contact.groups.length > 0 ? (
+          {displayGroupIds.length > 0 ? (
             <ul className="card" style={{ padding: '1rem', listStyle: 'none', margin: 0 }}>
-              {contact.groups.map((gid) => (
+              {displayGroupIds.map((gid) => (
                 <li key={gid} style={{ padding: '.35rem 0' }}>
-                  <Link to={`/groups/${gid}`}>{groupName(gid)}</Link>
+                  <Link to={`/groups/${gid}`}>{groupNameById(gid)}</Link>
                 </li>
               ))}
             </ul>

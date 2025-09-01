@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../services/api.js';
 
-export default function ContactForm({
+const ContactForm = ({
   mode = 'create',                    // 'create' | 'edit'
   initialData = null,                 // pre-fetched data if applicable
   onSaved,                            // callback(contact) if applicable
-}) {
+}) => {
   const navigate = useNavigate();
   const params = useParams();         // expects :id when editing via route
   const contactId = useMemo(() => initialData?._id || params.id, [initialData, params]);
@@ -32,7 +32,7 @@ export default function ContactForm({
     (async () => {
       try {
         const { data } = await api.get('/groups');
-        setAllGroups(data);
+        setAllGroups(Array.isArray(data) ? data : []);
       } catch {
         // Non-blocking for form
       }
@@ -70,7 +70,7 @@ export default function ContactForm({
             groups:    data.groups?.map(String) ?? [],
           });
         } catch (e) {
-          setError(e.response?.data?.error || 'Failed to load contact');
+          setError(e?.response?.data?.error || 'Failed to load contact');
         } finally {
           setLoading(false);
         }
@@ -118,7 +118,7 @@ export default function ContactForm({
       onSaved?.(data);
       navigate(mode === 'edit' ? `/contacts/${data._id || contactId}` : '/dashboard');
     } catch (e) {
-      setError(e.response?.data?.error || 'Save failed');
+      setError(e?.response?.data?.error || 'Save failed');
     } finally {
       setSaving(false);
     }
@@ -183,4 +183,6 @@ export default function ContactForm({
       </button>
     </form>
   );
-}
+};
+
+export default ContactForm;

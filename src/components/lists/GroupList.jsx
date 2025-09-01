@@ -4,10 +4,10 @@ import EmptyState from '../EmptyState.jsx';
 
 const TYPES = ['all','cohort','network','friend','family','business','sport','other'];
 
-export default function GroupList({
+const GroupList = ({
   groups = [],
   onDelete,                // optional: (groupId) => void
-}) {
+}) => {
   const [q, setQ] = useState('');
   const [type, setType] = useState('all');
   const [dir, setDir] = useState('asc'); // 'asc' | 'desc'
@@ -59,7 +59,8 @@ export default function GroupList({
     <section aria-labelledby="group-list-title">
       <header className="flex-between" style={{ marginBottom: '.8rem' }}>
         <h2 id="group-list-title" style={{ margin: 0 }}>
-          Groups <span className="badge" aria-label={`${resultCount} of ${count} showing`}>
+          Groups{' '}
+          <span className="badge" aria-label={`${resultCount} of ${count} showing`}>
             {resultCount}/{count}
           </span>
         </h2>
@@ -142,7 +143,14 @@ export default function GroupList({
         <div style={{ marginTop: '1rem' }}>
           <EmptyState
             title="No matches"
-            action={<button className="btn" onClick={() => { setQ(''); setType('all'); }}>Clear filters</button>}
+            action={
+              <button
+                className="btn"
+                onClick={() => { setQ(''); setType('all'); }}
+              >
+                Clear filters
+              </button>
+            }
             icon="🔎"
           >
             Try a different name or type.
@@ -151,4 +159,6 @@ export default function GroupList({
       )}
     </section>
   );
-}
+};
+
+export default GroupList;

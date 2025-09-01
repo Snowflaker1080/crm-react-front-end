@@ -1,8 +1,6 @@
 import { useState, useContext } from 'react';
-import { useNavigate } from 'react-router';
-
+import { useNavigate } from 'react-router-dom';
 import { signUp } from '../../services/authService';
-
 import { UserContext } from '../../contexts/UserContext';
 
 const SignUpForm = () => {
