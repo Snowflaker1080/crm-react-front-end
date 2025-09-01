@@ -1,118 +1,129 @@
 /* src/index.css */
 
-/* === Navbar === */
+/* --- Navbar shell --- */
 .navbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
-  padding: 0.75rem 1rem;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;      /* outer breathing room */
   background: #111;
-  color: white;
+  color: #fff;
+  border-bottom: 1px solid rgba(255,255,255,.06);
 }
 
+/* --- Left brand --- */
 .nav-left {
-  margin-right: 2rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-right: 2rem;            /* gap between brand and center cluster */
 }
 
 .nav-logo {
-  font-weight: bold;
+  font-weight: 700;
   font-size: 1.2rem;
   text-decoration: none;
-  color: white;
+  color: #fff;
 }
 
-.nav-links {
+/* --- Center cluster (buttons) --- */
+.nav-center {
+  flex: 1;                        /* occupy middle lane */
   display: flex;
-  flex: 1;
-  justify-content: center; /* center the menu as a block */
-  gap: 1rem;               /* space between buttons */
+  justify-content: center;        /* center the group */
   align-items: center;
+  gap: 1.25rem;                   /* uniform spacing between items */
+  padding: 0.25rem 0.75rem;       /* subtle inner breathing room */
 }
 
-/* Base link/button reset */
-.nav-links a,
-.nav-links .btn-link {
+@media (max-width: 720px) {
+  .nav-center {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+}
+
+/* tiny optical balance; main spacing comes from gap */
+.nav-center > * { margin: 0 0.05rem; }
+
+/* --- Base link/button reset inside navbar --- */
+.navbar a,
+.navbar .btn-link {
   text-decoration: none;
-  font-weight: 500;
-  color: white;
+  color: #fff;
+  font-weight: 400;
 }
 
-/* Shared Navbar Button Base */
+/* --- Shared Navbar Button Base (all actionable chips) --- */
 .nav-button {
-  flex: 1;                 /* each button grows equally */
-  max-width: 140px;        /* equal width cap */
-  min-width: 100px;        /* consistent minimum */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 36px;
-  padding: 0.4em 1em;
-  border-radius: 6px;
-  font-weight: bold;
+  padding: 0.45em 1.0em;
+  border-radius: 8px;
+  font-weight: 400;                 /* normal by default */
   color: #fff;
   transition: all 0.2s ease;
   text-align: center;
   white-space: nowrap;
+  border: none;                      /* for .btn-link */
+  box-shadow: 0 1px 0 rgba(0,0,0,.15) inset;
 }
 
-/* Variants */
-.btn-link.signout.nav-button {
-  background: #e63946;
-}
-.btn-link.signout.nav-button:hover {
-  background: #ff4d5a;
-  transform: translateY(-2px) scale(1.05);
-}
-.btn-link.signout.nav-button:active {
-  background: #c71c2b;
-  transform: translateY(0) scale(0.98);
-}
+/* --- Button Variants + Hover (bold + slight scale) --- */
 
-.nav-links a.signin.nav-button,
-.nav-links a.signup.nav-button {
+/* Sign In / Sign Up */
+.nav-center a.signin.nav-button,
+.nav-center a.signup.nav-button {
   background: #2ecc71;
 }
-.nav-links a.signin.nav-button:hover,
-.nav-links a.signup.nav-button:hover {
-  background: #3ee685;
-  transform: translateY(-2px) scale(1.05);
-}
-.nav-links a.signin.nav-button:active,
-.nav-links a.signup.nav-button:active {
+.nav-center a.signin.nav-button:hover,
+.nav-center a.signup.nav-button:hover {
   background: #27ae60;
-  transform: translateY(0) scale(0.98);
-}
-
-.nav-links a.new-group.nav-button,
-.nav-links a.new-contact.nav-button,
-.nav-links a.invite.nav-button {
-  background: #646cff;
-}
-.nav-links a.new-group.nav-button:hover,
-.nav-links a.new-contact.nav-button:hover,
-.nav-links a.invite.nav-button:hover {
-  background: #747bff;
+  font-weight: 700;                 /* bolder on hover */
   transform: translateY(-2px) scale(1.05);
 }
-.nav-links a.new-group.nav-button:active,
-.nav-links a.new-contact.nav-button:active,
-.nav-links a.invite.nav-button:active {
-  background: #535bf2;
-  transform: translateY(0) scale(0.98);
-}
 
-.nav-links a.dashboard.nav-button {
+/* Dashboard */
+.nav-center a.dashboard.nav-button {
   background: #444;
 }
-.nav-links a.dashboard.nav-button:hover {
-  background: #666;
+.nav-center a.dashboard.nav-button:hover {
+  background: #222;
+  font-weight: 700;
   transform: translateY(-2px) scale(1.05);
 }
-.nav-links a.dashboard.nav-button:active {
-  background: #333;
-  transform: translateY(0) scale(0.98);
+
+/* New group / contact / invite */
+.nav-center a.new-group.nav-button,
+.nav-center a.new-contact.nav-button,
+.nav-center a.invite.nav-button {
+  background: #646cff;
+}
+.nav-center a.new-group.nav-button:hover,
+.nav-center a.new-contact.nav-button:hover,
+.nav-center a.invite.nav-button:hover {
+  background: #4a54e1;
+  font-weight: 700;
+  transform: translateY(-2px) scale(1.05);
 }
 
-/* === Shared Card Styles (applies to both group + contact cards) === */
+/* Sign Out */
+.nav-center .btn-link.signout.nav-button {
+  background: #e63946;
+}
+.nav-center .btn-link.signout.nav-button:hover {
+  background: #c71c2b;
+  font-weight: 700;
+  transform: translateY(-2px) scale(1.05);
+}
+
+/* --- Cards & misc (unchanged from your file; keep as needed) --- */
+
 .card {
   background: rgba(255, 255, 255, 0.15);
   border-radius: 0.75rem;
@@ -129,7 +140,6 @@
   color: #fff;
 }
 
-/* === Contact Card Specific Adjustments === */
 .contact-card {
   background: rgba(255, 255, 255, 0.12);
   padding: 0.05rem;
@@ -150,75 +160,31 @@
   margin: 0;
 }
 
-/* === Buttons inside ALL cards (group + contact) === */
 .card .btn,
 .contact-card .btn {
   font-size: 0.85em;
   padding: 0.4em 1em;
   background: #646cff;
-  color: white;
+  color: #fff;
   border-radius: 6px;
   border: none;
+  font-weight: 400;
   transition: all 0.2s ease;
 }
 
 .card .btn:hover,
 .contact-card .btn:hover {
-  background: #747bff;
+  background: #4a54e1;
+  color: #fff !important;
+  font-weight: 700;
   transform: translateY(-2px) scale(1.05);
 }
 
 .card .btn:active,
 .contact-card .btn:active {
-  background: #535bf2;
+  background: #393ebf;
+  color: #fff !important;
   transform: translateY(0) scale(0.99);
-}
-
-/* === Hover Effects (global) === */
-button,
-.btn {
-  transition: all 0.2s ease;
-  will-change: transform;
-}
-
-button:hover,
-.btn:hover {
-  border-color: #646cff;
-  background: rgba(100, 108, 255, 0.15);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
-  transform: translateY(-2px) scale(1.05);
-}
-
-button:active,
-.btn:active {
-  transform: translateY(0) scale(0.99);
-}
-
-a {
-  transition: color 0.2s ease, transform 0.2s ease;
-  will-change: transform;
-}
-
-a:hover {
-  color: #747bff;
-  transform: translateY(-1px) scale(1.02);
-}
-
-.card:hover {
-  background: rgba(255, 255, 255, 0.22);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
-  transform: translateY(-3px) scale(1.03);
-}
-
-.contact-card:hover {
-  background: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
-  transform: translateY(-3px) scale(1.03);
-}
-
-.card:active,
-.contact-card:active {
-  transform: translateY(-1px) scale(1.01);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -229,4 +195,52 @@ a:hover {
     transition: none !important;
     transform: none !important;
   }
+}
+
+/* --- Shared Navbar Button Base (all actionable chips) --- */
+.nav-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0.45em 1.0em;
+  border-radius: 8px;
+  font-weight: 400;
+  font-size: 0.95rem;             /* consistent font size */
+  font-family: inherit;           /* inherit app font */
+  color: #fff;
+  transition: all 0.2s ease;
+  text-align: center;
+  white-space: nowrap;
+  border: none;
+  box-shadow: 0 1px 0 rgba(0,0,0,.15) inset;
+
+  /* make all navbar buttons same width */
+  min-width: 120px;
+  max-width: 140px;
+}
+
+/* Sign Out */
+.nav-center .btn-link.signout.nav-button {
+  background: #e63946;
+  font-size: 0.95rem;              /* match other buttons */
+  font-family: inherit;            /* match other buttons */
+}
+.nav-center .btn-link.signout.nav-button:hover {
+  background: #c71c2b;
+  font-weight: 700;
+  transform: translateY(-2px) scale(1.05);
+}
+
+/* Dashboard & other cards hover darker */
+.card:hover {
+  background: rgba(0, 0, 0, 0.8);   /* darken closer to black */
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px) scale(1.03);
+}
+
+.contact-card:hover {
+  background: rgba(0, 0, 0, 0.6);   /* slightly lighter than main card */
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6);
+  transform: translateY(-3px) scale(1.03);
 }

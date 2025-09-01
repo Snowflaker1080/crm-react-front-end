@@ -5,6 +5,8 @@ import api from '../../services/api.js';
 import EmptyState from '../../components/EmptyState.jsx';
 import SectionHeader from '../../components/SectionHeader.jsx';
 import { useAuth } from '../../hooks/useAuth.jsx';
+import orbitLogo from '../../assets/Orbit CRM Logo.png';
+import classes from './Dashboard.module.css';
 
 const SORT_FIELD_KEY = 'dashboard.contacts.sortField';
 const SORT_ORDER_KEY = 'dashboard.contacts.sortOrder';
@@ -16,15 +18,99 @@ const readPersisted = (key, fallback, validSet) => {
   return v && validSet?.has(v) ? v : (v ?? fallback);
 };
 
+// Helpers
+const formatDate = (d) => {
+  if (!d) return '—';
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return '—';
+  return dt.toLocaleDateString();
+};
+const daysUntil = (d) => {
+  if (!d) return null;
+  const today = new Date();
+  const due = new Date(d);
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  const diffMs = due - today;
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+};
+
+// Reminder UI
+const ReminderRow = ({ c }) => {
+  const du = daysUntil(c.nextConnectionDate);
+  const overdue = du !== null && du < 0;
+  const dueLabel = du === 0 ? 'Due today' : overdue ? `${Math.abs(du)}d overdue` : `${du}d`;
+  return (
+    <li
+      key={c._id}
+      className={classes.listreminderUI}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '.75rem',
+        padding: '.5rem 0',
+        borderBottom: '1px solid var(--border, #e5e7eb)',
+      }}
+    >
+      <div style={{ minWidth: 0 }}>
+        <Link to={`/contacts/${c._id}`} style={{ fontWeight: 600 }}>
+          {c.firstName} {c.lastName}
+        </Link>
+        <div className="muted" style={{ fontSize: '.85rem' }}>
+          Connect by {formatDate(c.nextConnectionDate)}
+        </div>
+      </div>
+      <span
+        className="badge"
+        style={{
+          whiteSpace: 'nowrap',
+          padding: '.25rem .5rem',
+          borderRadius: '999px',
+          fontSize: '.8rem',
+          background: overdue ? '#fee2e2' : '#eef2ff',
+          color: overdue ? '#991b1b' : '#3730a3',
+          border: '1px solid rgba(0,0,0,0.06)',
+        }}
+      >
+        {dueLabel}
+      </span>
+    </li>
+  );
+};
+
+const RemindersCard = ({ reminders, isLoading }) => (
+  <section className="card" aria-labelledby="reminders-title" style={{ padding: '1rem' }}>
+    <h2 id="reminders-title" style={{ marginTop: 0 }}>Connection Reminders</h2>
+    {isLoading ? (
+      <p className="muted">Loading reminders…</p>
+    ) : reminders.length === 0 ? (
+      <EmptyState
+        title="No upcoming reminders"
+        body="Set a connection cadence on contact profiles to see them here."
+      />
+    ) : (
+      <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+        {reminders.map((c) => (
+          <ReminderRow key={c._id} c={c} />
+        ))}
+      </ul>
+    )}
+  </section>
+);
+
 const Dashboard = () => {
   const { token } = useAuth();
+
   const [me, setMe] = useState(null);
   const [groups, setGroups] = useState([]);
   const [contacts, setContacts] = useState([]);
+  const [reminders, setReminders] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [remindersLoading, setRemindersLoading] = useState(true);
 
-  // Persisted sort state (lazy init from localStorage)
+  // persisted sort
   const [sortField, setSortField] = useState(() =>
     readPersisted(SORT_FIELD_KEY, 'firstName', VALID_FIELDS)
   );
@@ -32,202 +118,255 @@ const Dashboard = () => {
     readPersisted(SORT_ORDER_KEY, 'asc', VALID_ORDERS)
   );
 
-  // Gate: if no token, redirect to sign-in
-  if (!token && !localStorage.getItem('token')) {
-    return <Navigate to="/sign-in" replace />;
-  }
+  useEffect(() => {
+    localStorage.setItem(SORT_FIELD_KEY, sortField);
+  }, [sortField]);
+  useEffect(() => {
+    localStorage.setItem(SORT_ORDER_KEY, sortOrder);
+  }, [sortOrder]);
 
+  if (!token) return <Navigate to="/sign-in" replace />;
+
+  // Load dashboard data
   useEffect(() => {
     let isMounted = true;
-
     (async () => {
       try {
-        const [{ data: meRes }, { data: groupsRes }, { data: contactsRes }] = await Promise.all([
-          api.get('/users/me?include=counts'),
+        setLoading(true);
+        const [{ data: meRaw }, { data: groupData }, { data: contactData }] = await Promise.all([
+          api.get('/users/me'),
           api.get('/groups'),
           api.get('/contacts'),
         ]);
 
         if (!isMounted) return;
 
-        setMe(meRes?.user || null);
-        setGroups(Array.isArray(groupsRes) ? groupsRes : []);
-        setContacts(Array.isArray(contactsRes) ? contactsRes : []);
+        // 👇 Normalize /users/me payload (handles {user: {...}} or raw user)
+        const userObj = meRaw?.user ?? meRaw ?? null;
+        setMe(userObj);
+
+        setGroups(groupData || []);
+        setContacts(contactData || []);
       } catch (e) {
         if (!isMounted) return;
-        setError(e?.response?.data?.error || e?.message || 'Failed to load dashboard');
+        setError(e.response?.data?.error || 'Failed to load dashboard data');
       } finally {
         if (isMounted) setLoading(false);
       }
     })();
-
     return () => { isMounted = false; };
   }, []);
 
-  // Persist changes
+  // Load reminders
   useEffect(() => {
-    if (VALID_FIELDS.has(sortField)) localStorage.setItem(SORT_FIELD_KEY, sortField);
-    if (VALID_ORDERS.has(sortOrder)) localStorage.setItem(SORT_ORDER_KEY, sortOrder);
-  }, [sortField, sortOrder]);
+    let isMounted = true;
+    (async () => {
+      try {
+        setRemindersLoading(true);
+        const { data } = await api.get('/contacts/reminders/next');
+        if (!isMounted) return;
+        setReminders(Array.isArray(data) ? data : []);
+      } catch {
+        if (!isMounted) return;
+        const derived = (contacts || [])
+          .filter((c) => !!c.connection?.nextConnectDueAt)
+          .sort((a, b) => new Date(a.connection.nextConnectDueAt) - new Date(b.connection.nextConnectDueAt))
+          .slice(0, 3)
+          .map((c) => ({ ...c, nextConnectionDate: c.connection.nextConnectDueAt }));
+        setReminders(derived);
+      } finally {
+        if (isMounted) setRemindersLoading(false);
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [contacts]);
 
-  // derive sorted contacts with useMemo
+  // Sort contacts (right panel)
   const sortedContacts = useMemo(() => {
-    const field = VALID_FIELDS.has(sortField) ? sortField : 'firstName';
-    const order = sortOrder === 'desc' ? -1 : 1;
-    return [...contacts].sort((a, b) => {
-      const aVal = (a?.[field] || '').toString().toLowerCase();
-      const bVal = (b?.[field] || '').toString().toLowerCase();
-      if (aVal < bVal) return -1 * order;
-      if (aVal > bVal) return 1 * order;
+    const list = [...(contacts || [])];
+    list.sort((a, b) => {
+      const av = (a?.[sortField] || '').toLowerCase();
+      const bv = (b?.[sortField] || '').toLowerCase();
+      if (av < bv) return sortOrder === 'asc' ? -1 : 1;
+      if (av > bv) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     });
+    return list;
   }, [contacts, sortField, sortOrder]);
 
-  if (loading) {
-    return (
-      <section className="container">
-        <p>Loading…</p>
-      </section>
-    );
-  }
+  // Layout styles
+  const gridStyle = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: '1rem',
+    alignItems: 'start',
+  };
+  const asideSticky = { position: 'sticky', top: '1rem' };
+  const contactsPanelStyle = {
+    display: 'flex',
+    flexDirection: 'column',
+    padding: '1rem',
+    maxHeight: 'calc(100vh - 2rem)',
+    overflow: 'hidden',
+  };
+  const contactsSortRow = { display: 'flex', gap: '.5rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '.5rem' };
+  const contactsListScroll = { overflowY: 'auto', marginTop: '.75rem', paddingRight: '.25rem' };
 
-  if (error) {
-    return (
-      <section className="container">
-        <p role="alert">{error}</p>
-      </section>
-    );
-  }
+  const groupDescriptionStyle = {
+    margin: '.35rem 0 0',
+    fontSize: '.9rem',
+    color: 'var(--muted, #6b7280)',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '.5rem',
+    paddingLeft: '1rem',
+  };
 
   return (
-    <section className="container">
-      <header className="flex-between" style={{ marginBottom: '1rem' }}>
-        <h1>Welcome{me?.username ? `, ${me.username}` : ''}</h1>
-        <span className="badge">{new Date().toLocaleDateString()}</span>
-      </header>
+    <section className="container" aria-labelledby="dashboard-title" style={{ marginTop: '1rem' }}>
 
-      <div className="grid two">
-        {/* Groups panel */}
-        <section>
-          <SectionHeader
-            title="Your Groups"
-            right={<Link className="btn btn-primary" to="/groups/new">New Group</Link>}
-          />
-          {groups.length === 0 ? (
-            <EmptyState
-              title="No groups yet"
-              action={<Link className="btn btn-primary" to="/groups/new">Create your first group</Link>}
-              icon="👥"
-            >
-              Organise contacts into cohorts like Friends, Business, Sport…
-            </EmptyState>
-          ) : (
-            <div
-              className="grid"
-              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px,1fr))' }}
-            >
-              {groups.map((g) => (
-                <div
-                  key={g._id}
-                  className="card"
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {/* Name + badge side by side */}
+      {/* Centered SectionHeader with logo + title */}
+      <header style={{ marginBottom: '1rem', textAlign: 'center' }}>
+       <SectionHeader
+  title={
+    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.5rem' }}>
+        <img
+          src={orbitLogo}
+          alt="Orbit CRM"
+          width={48}
+          height={48}
+          style={{ display: 'inline-block' }}
+        />
+        <span style={{ fontWeight: 600, fontSize: '1.5rem' }}>Dashboard</span>
+      </span>
+      <span className="muted" style={{ fontSize: '1.2rem' }}>
+        {me
+          ? `Welcome back, ${me.username || me.name || me.firstName || me.email || 'friend'}`
+          : 'Overview'}
+      </span>
+    </div>
+  }
+        />
+      </header>
+      {error && (
+        <div role="alert" className="card" style={{ padding: '1rem', borderLeft: '4px solid #ef4444' }}>
+          <strong>Error:</strong> {error}
+        </div>
+      )}
+      <div style={gridStyle}>
+
+{/* LEFT: Groups, then Reminders */}
+        <main>
+          <section aria-labelledby="groups-title" className="card" style={{ padding: '1rem', marginBottom: '1rem' }}>
+            <h2 id="groups-title" style={{ marginTop: 0 }}>Groups</h2>
+            {loading ? (
+              <p className="muted">Loading groups…</p>
+            ) : groups.length === 0 ? (
+              <EmptyState
+                title="No groups yet"
+                body="Create a cohort, network, or friend group to organise contacts."
+                actionLabel="+ New Group"
+                actionHref="/groups/new"
+              />
+            ) : (
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: '.5rem' }}>
+                {groups.map((g) => (
+                  <li key={g._id} className="card" style={{ padding: '.75rem' }}>
+                    {/* Title row: name + type (text only, same style) */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', flexWrap: 'wrap' }}>
-                      <h3 style={{ margin: 0 }}>{g.name}</h3>
-                      <span className="badge">{g.type}</span>
+                      <Link
+                        to={`/groups/${g._id}`}
+                        style={{ fontWeight: 600, color: 'inherit', textDecoration: 'none' }}
+                      >
+                        {g.name}
+                      </Link>
+                      {g.type && (
+                        <span style={{ fontWeight: 600, color: 'inherit' }}>
+                      | {g.type}
+                        </span>
+                      )}
                     </div>
 
-                    {/* ✅ Only show description if present */}
-                    {g.description && (
-                      <p
-                        className="muted"
-                        style={{
-                          marginTop: '.3rem',
-                          marginBottom: 0,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          maxWidth: '40ch',
-                        }}
-                      >
-                        {g.description}
-                      </p>
-                    )}
-                  </div>
-                  <Link className="btn" to={`/groups/${g._id}`}>View</Link>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+{/* Description */}
+                    {g.description ? (
+                      <div style={groupDescriptionStyle}>
+                        <span aria-hidden="true" style={{ lineHeight: 1.2 }}>•</span>
+                        <span>{g.description}</span>
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
-        {/* Contacts panel */}
-        <section>
-          <SectionHeader
-            title="Your Contacts"
-            right={<Link className="btn btn-primary" to="/contacts/new">New Contact</Link>}
-          />
+          <RemindersCard reminders={reminders} isLoading={remindersLoading} />
+        </main>
+        
+{/* RIGHT: Contacts */}
+        <aside style={asideSticky}>
+          <section aria-labelledby="contacts-title" className="card" style={contactsPanelStyle}>
+            <h2 id="contacts-title" style={{ margin: 0 }}>Contacts</h2>
 
-          {/* sort controls */}
-          {contacts.length > 0 && (
-            <div style={{ display: 'flex', gap: '.5rem', marginBottom: '.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <label>
-                Sort by{' '}
-                <select value={sortField} onChange={(e) => setSortField(e.target.value)}>
-                  <option value="firstName">First Name</option>
-                  <option value="lastName">Last Name</option>
-                </select>
-              </label>
-              <label>
-                Order{' '}
-                <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}>
-                  <option value="asc">Ascending</option>
-                  <option value="desc">Descending</option>
-                </select>
-              </label>
-              <button
-                className="btn"
-                onClick={() => {
-                  setSortField('firstName');
-                  setSortOrder('asc');
-                }}
-                title="Reset sort"
-              >
-                Reset
-              </button>
+            <div style={contactsSortRow}>
+              <label className="muted" htmlFor="sort-field">Sort</label>
+              <select id="sort-field" value={sortField} onChange={(e) => setSortField(VALID_FIELDS.has(e.target.value) ? e.target.value : 'firstName')}>
+                <option value="firstName">First name</option>
+                <option value="lastName">Last name</option>
+              </select>
+              <select aria-label="Sort order" value={sortOrder} onChange={(e) => setSortOrder(VALID_ORDERS.has(e.target.value) ? e.target.value : 'asc')}>
+                <option value="asc">A → Z</option>
+                <option value="desc">Z → A</option>
+              </select>
             </div>
-          )}
 
-          {contacts.length === 0 ? (
-            <EmptyState
-              title="No contacts yet"
-              action={<Link className="btn btn-primary" to="/contacts/new">Add a contact</Link>}
-              icon="📇"
-            >
-              Save people you want to keep in touch with.
-            </EmptyState>
-          ) : (
-            <div
-              className="grid"
-              style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px,1fr))' }}
-            >
-              {sortedContacts.map((c) => (
-                <div
-                  key={c._id}
-                  className="card contact-card"
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                >
-                  <h3 style={{ marginTop: 0 }}>
-                    {[c.firstName, c.lastName].filter(Boolean).join(' ') || 'Unnamed'}
-                  </h3>
-                  <Link className="btn" to={`/contacts/${c._id}`}>View</Link>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+            {loading ? (
+              <p className="muted" style={{ marginTop: '.75rem' }}>Loading contacts…</p>
+            ) : sortedContacts.length === 0 ? (
+              <div style={{ marginTop: '.75rem' }}>
+                <EmptyState
+                  title="No contacts yet"
+                  body="Add your first contact to start organising your network."
+                  actionLabel="+ New Contact"
+                  actionHref="/contacts/new"
+                />
+              </div>
+            ) : (
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, ...contactsListScroll }}>
+                {sortedContacts.map((c) => {
+                  const nextDate = c.nextConnectionDate || c.connection?.nextConnectDueAt;
+                  return (
+                    <li key={c._id} className="card" style={{ padding: '.75rem', marginBottom: '.5rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '.75rem' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <Link to={`/contacts/${c._id}`} style={{ fontWeight: 600 }}>
+                            {c.firstName} {c.lastName}
+                          </Link>
+                          {c.location && (
+                            <div className="muted" style={{ fontSize: '.85rem' }}>{c.location}</div>
+                          )}
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          {nextDate ? (
+                            <span className="muted" style={{ fontSize: '.85rem' }}>
+                              Next connect: {formatDate(nextDate)}
+                            </span>
+                          ) : (
+                            <Link to={`/contacts/${c._id}`} className="link" style={{ fontSize: '.9rem' }}>
+                              Set cadence →
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+                <li aria-hidden="true" style={{ height: '.25rem' }} />
+              </ul>
+            )}
+          </section>
+        </aside>
       </div>
     </section>
   );

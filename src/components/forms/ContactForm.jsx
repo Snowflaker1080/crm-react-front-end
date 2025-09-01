@@ -1,6 +1,15 @@
+// src/components/forms/ContactForm.jsx
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../services/api.js';
+
+const toYyyyMmDd = (value) => {
+  if (!value) return '';
+  // Accept Date or ISO/string and return YYYY-MM-DD for <input type="date">
+  const d = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(d?.getTime?.())) return '';
+  return d.toISOString().slice(0, 10);
+};
 
 const ContactForm = ({
   mode = 'create',                    // 'create' | 'edit'
@@ -14,6 +23,8 @@ const ContactForm = ({
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
+    jobTitle: '',
+    dateOfBirth: '',                  // YYYY-MM-DD string for the date input
     email: '',
     phone: '',
     city: '',
@@ -45,6 +56,8 @@ const ContactForm = ({
       setForm({
         firstName: initialData.firstName ?? '',
         lastName:  initialData.lastName ?? '',
+        jobTitle:  initialData.jobTitle ?? '',
+        dateOfBirth: toYyyyMmDd(initialData.dateOfBirth),
         email:     initialData.email ?? '',
         phone:     initialData.phone ?? '',
         city:      initialData.city ?? '',
@@ -62,6 +75,8 @@ const ContactForm = ({
           setForm({
             firstName: data.firstName ?? '',
             lastName:  data.lastName ?? '',
+            jobTitle:  data.jobTitle ?? '',
+            dateOfBirth: toYyyyMmDd(data.dateOfBirth),
             email:     data.email ?? '',
             phone:     data.phone ?? '',
             city:      data.city ?? '',
@@ -102,6 +117,9 @@ const ContactForm = ({
       const payload = {
         firstName: form.firstName.trim(),
         lastName:  form.lastName.trim(),
+        jobTitle:  form.jobTitle.trim(),
+        // Send an empty string as null/omit to avoid invalid dates server-side
+        dateOfBirth: form.dateOfBirth ? form.dateOfBirth : null,
         email:     form.email.trim(),
         phone:     form.phone.trim(),
         city:      form.city.trim(),
@@ -132,44 +150,101 @@ const ContactForm = ({
 
       <fieldset>
         <legend>Identity</legend>
-        <label>
+
+        <label htmlFor="firstName">
           First name
-          <input name="firstName" value={form.firstName} onChange={handleChange} />
+          <input id="firstName" name="firstName" value={form.firstName} onChange={handleChange} />
         </label>
-        <label>
+
+        <label htmlFor="lastName">
           Last name
-          <input name="lastName" value={form.lastName} onChange={handleChange} />
+          <input id="lastName" name="lastName" value={form.lastName} onChange={handleChange} />
         </label>
+
+        <label htmlFor="jobTitle">
+          Job Title / Profession
+          <input
+            id="jobTitle"
+            type="text"
+            name="jobTitle"
+            placeholder="e.g., Product Manager"
+            value={form.jobTitle}
+            onChange={handleChange}
+            autoComplete="organization-title"
+          />
+        </label>
+
+        <label htmlFor="dateOfBirth">
+          Date of Birth
+          <input
+            id="dateOfBirth"
+            type="date"
+            name="dateOfBirth"
+            value={form.dateOfBirth}
+            onChange={handleChange}
+            aria-describedby="dob-help"
+          />
+        </label>
+        <small id="dob-help" className="muted">Format: YYYY-MM-DD</small>
       </fieldset>
 
       <fieldset>
         <legend>Contact details</legend>
-        <label>
+
+        <label htmlFor="email">
           Email
-          <input type="email" name="email" value={form.email} onChange={handleChange} />
+          <input
+            id="email"
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            autoComplete="email"
+          />
         </label>
-        <label>
+
+        <label htmlFor="phone">
           Phone
-          <input name="phone" value={form.phone} onChange={handleChange} />
+          <input
+            id="phone"
+            name="phone"
+            value={form.phone}
+            onChange={handleChange}
+            autoComplete="tel"
+          />
         </label>
-        <label>
+
+        <label htmlFor="city">
           City
-          <input name="city" value={form.city} onChange={handleChange} />
+          <input id="city" name="city" value={form.city} onChange={handleChange} />
         </label>
-        <label>
+
+        <label htmlFor="country">
           Country
-          <input name="country" value={form.country} onChange={handleChange} />
+          <input id="country" name="country" value={form.country} onChange={handleChange} />
         </label>
       </fieldset>
 
-      <label>
+      <label htmlFor="notes">
         Notes
-        <textarea name="notes" value={form.notes} onChange={handleChange} rows={4} />
+        <textarea
+          id="notes"
+          name="notes"
+          value={form.notes}
+          onChange={handleChange}
+          rows={4}
+        />
       </label>
 
-      <label>
+      <label htmlFor="groups">
         Groups
-        <select multiple value={form.groups} onChange={handleGroupsChange} aria-label="Select groups">
+        <select
+          id="groups"
+          multiple
+          value={form.groups}
+          onChange={handleGroupsChange}
+          aria-label="Select groups"
+        >
           {allGroups.map((g) => (
             <option key={g._id} value={g._id}>{g.name}</option>
           ))}

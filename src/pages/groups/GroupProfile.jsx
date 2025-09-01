@@ -148,7 +148,7 @@ const GroupProfile = () => {
     }
   };
 
-  // === NEW: delete (remove) a single member from this group ===
+  // === delete (remove) a single member from this group ===
   const onRemoveMember = async (contactId) => {
     if (!window.confirm('Remove this contact from the group?')) return;
     try {
@@ -197,7 +197,7 @@ const GroupProfile = () => {
 
       <h2>Members</h2>
 
-      {/* Single-add existing contact controls */}
+{/* Single-add existing contact controls */}
       <div className="card" style={{ padding: '1rem', marginBottom: '1rem' }}>
         {!pickerOpen ? (
           <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
@@ -245,7 +245,7 @@ const GroupProfile = () => {
         )}
       </div>
 
-      {/* Bulk actions (unchanged) */}
+{/* Bulk actions (unchanged) */}
       {bulkOpen && (
         <div className="card" style={{ padding: '1rem', marginBottom: '1rem', display: 'grid', gap: '.75rem' }}>
           <h3 style={{ margin: 0 }}>Bulk actions</h3>
@@ -294,7 +294,7 @@ const GroupProfile = () => {
             </div>
           </div>
 
-          {/* Bulk REMOVE */}
+{/* Bulk REMOVE */}
           <div style={{ marginTop: '.75rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <span className="muted">Select members to remove</span>
@@ -333,7 +333,7 @@ const GroupProfile = () => {
         </div>
       )}
 
-      {/* Members list with per-row Delete button */}
+{/* Members list with per-row Delete button */}
       {members.length === 0 ? (
         <EmptyState
           title="No members in this group"

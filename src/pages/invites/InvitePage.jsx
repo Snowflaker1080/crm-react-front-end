@@ -81,7 +81,7 @@ const InvitePage = () => {
   const emailValid = useMemo(() => {
     const v = contactEmail.trim();
     if (!v) return false;
-    // simple email check
+    // email check
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
   }, [contactEmail]);
 
@@ -186,7 +186,7 @@ const InvitePage = () => {
         </form>
       </div>
 
-      {/* List invites */}
+{/* List invites */}
       <h2 style={{ marginTop: 0 }}>Your Invites</h2>
 
       {loading ? (

@@ -11,7 +11,8 @@ const Home = () => {
 
   return (
     <section className="container" aria-labelledby="home-title">
-      {/* Hero */}
+      
+{/* Hero */}
       <header
         className="card"
         style={{
@@ -22,14 +23,15 @@ const Home = () => {
           gap: '1.5rem',
         }}
       >
-        {/* Logo on the left */}
+
+{/* Logo on the left */}
         <img
           src={OrbitLogo}
           alt="Orbit CRM Logo"
           style={{ width: '80px', height: 'auto', flexShrink: 0 }}
         />
 
-        {/* Text content */}
+{/* Text content */}
         <div style={{ flex: 1 }}>
           <h1 id="home-title" style={{ marginTop: 0, marginBottom: '.4rem' }}>
             Orbit CRM
@@ -56,7 +58,7 @@ const Home = () => {
         </div>
       </header>
 
-      {/* Feature highlights mapped to your user stories */}
+{/* Feature highlights mapped to your user stories */}
       <div className="grid two">
         <article className="card" aria-labelledby="feature-groups">
           <h2 id="feature-groups" style={{ marginTop: 0 }}>Create Groups</h2>

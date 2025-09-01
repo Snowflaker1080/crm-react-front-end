@@ -105,7 +105,7 @@ const ConnectionCadenceCard = ({ contact, onRefresh }) => {
 
       <hr style={{ margin: '1rem 0' }} />
 
-      {/* FLEXBOX CONTROLS (prevents overlap) */}
+{/* FLEXBOX CONTROLS (prevents overlap) */}
       <label htmlFor="freq-qty" style={{ display: 'block', fontWeight: 600, marginBottom: '.5rem' }}>
         Every
       </label>
@@ -137,7 +137,7 @@ const ConnectionCadenceCard = ({ contact, onRefresh }) => {
         Stored as ~{approxDays} day{approxDays === 1 ? '' : 's'}.
       </div>
 
-      {/* Log a connection */}
+{/* Log a connection */}
       <div style={{ marginTop: '1rem', display: 'grid', gap: '.5rem' }}>
         <label htmlFor="log-note"><strong>Log a connection (today)</strong></label>
         <textarea
